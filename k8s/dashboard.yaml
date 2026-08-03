@@ -1,0 +1,75 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: ebpf-dashboard
+  namespace: ebpf-lab
+  labels:
+    app: ebpf-dashboard
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: ebpf-dashboard
+  template:
+    metadata:
+      labels:
+        app: ebpf-dashboard
+    spec:
+      # Single-node minikube: hostPath below only works because this pod is
+      # guaranteed to land on the same node where the Tetragon DaemonSet runs.
+      containers:
+        - name: dashboard
+          image: ebpf-lab/dashboard:latest
+          imagePullPolicy: Never
+          securityContext:
+            # tetragon.log is written 0600 root:root by the Tetragon agent
+            runAsUser: 0
+          ports:
+            - containerPort: 8080
+          env:
+            - name: HUBBLE_RELAY_ADDR
+              value: "hubble-relay.kube-system.svc.cluster.local:80"
+            - name: TETRAGON_LOG_PATH
+              value: "/var/run/cilium/tetragon/tetragon.log"
+            - name: THREAT_INTEL_FILE
+              value: "/etc/threat-intel/malicious_ips.txt"
+            # Optional: point at a live feed, e.g. Feodo Tracker, merged with
+            # the static demo list. Left unset by default (offline-safe demo).
+            - name: THREAT_FEED_URL
+              value: ""
+          volumeMounts:
+            - name: tetragon-export
+              mountPath: /var/run/cilium/tetragon
+              readOnly: true
+            - name: threat-intel
+              mountPath: /etc/threat-intel
+              readOnly: true
+          resources:
+            requests:
+              cpu: 50m
+              memory: 64Mi
+            limits:
+              cpu: 500m
+              memory: 256Mi
+      volumes:
+        - name: tetragon-export
+          hostPath:
+            path: /var/run/cilium/tetragon
+            type: Directory
+        - name: threat-intel
+          configMap:
+            name: threat-intel-feed
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ebpf-dashboard
+  namespace: ebpf-lab
+spec:
+  type: NodePort
+  selector:
+    app: ebpf-dashboard
+  ports:
+    - port: 80
+      targetPort: 8080
+      nodePort: 30080

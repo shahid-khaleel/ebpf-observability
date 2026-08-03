@@ -1,0 +1,74 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: traffic-generator-script
+  namespace: ebpf-lab
+data:
+  run.sh: |
+    #!/bin/sh
+    # Generates the four kernel-observable activity classes this lab watches:
+    # network connections, process creation, file access, and syscalls.
+    # Nothing here is "instrumentation" of an app - it's just an ordinary
+    # workload; eBPF in the kernel observes it without any code changes.
+    i=0
+    while true; do
+      i=$((i + 1))
+
+      # --- file access ---
+      echo "sample $i" > /tmp/demo-file.txt
+      cat /tmp/demo-file.txt >/dev/null
+      ls /etc >/dev/null
+      chmod 644 /tmp/demo-file.txt
+      rm -f /tmp/demo-file-old.txt
+
+      # --- process creation (a new process per command) ---
+      id >/dev/null
+      whoami >/dev/null
+
+      # --- benign network connections ---
+      curl -s -o /dev/null -m 2 http://web-backend.ebpf-lab.svc.cluster.local/ || true
+      curl -s -o /dev/null -m 2 https://example.com/ || true
+
+      # --- simulated malicious connections ---
+      # These IPs are RFC 5737 TEST-NET documentation addresses (never
+      # publicly routed) that our threat-intel list flags as "malicious",
+      # so the dashboard's Alerts panel lights up deterministically without
+      # needing a live threat feed or targeting a real host.
+      curl -s -o /dev/null -m 2 http://192.0.2.10/ || true
+      curl -s -o /dev/null -m 2 http://198.51.100.23/ || true
+
+      sleep 5
+    done
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: traffic-generator
+  namespace: ebpf-lab
+  labels:
+    app: traffic-generator
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: traffic-generator
+  template:
+    metadata:
+      labels:
+        app: traffic-generator
+    spec:
+      containers:
+        - name: generator
+          image: curlimages/curl:8.10.1
+          command: ["sh", "/scripts/run.sh"]
+          volumeMounts:
+            - name: script
+              mountPath: /scripts
+          resources:
+            requests: { cpu: 10m, memory: 16Mi }
+            limits: { cpu: 100m, memory: 64Mi }
+      volumes:
+        - name: script
+          configMap:
+            name: traffic-generator-script
+            defaultMode: 0755

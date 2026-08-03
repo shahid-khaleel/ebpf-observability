@@ -1,0 +1,18 @@
+# Demo threat-intel feed for the eBPF observability lab.
+#
+# These are NOT real-world malicious IPs. They are drawn from RFC 5737
+# TEST-NET documentation ranges (192.0.2.0/24, 198.51.100.0/24, 203.0.113.0/24),
+# which are reserved by IANA for documentation/examples and never routed on
+# the public internet. Using them lets the demo trigger deterministic,
+# offline-safe "malicious IP" alerts without labeling any real host as bad
+# and without requiring internet access to a live threat feed.
+#
+# To point this lab at a REAL feed instead, set THREAT_FEED_URL on the
+# threat-detector deployment (see k8s/threat-detector.yaml) to a live
+# blocklist such as https://feodotracker.abuse.ch/downloads/ipblocklist.txt
+# and it will be merged with this static list on refresh.
+
+192.0.2.10
+192.0.2.55
+198.51.100.23
+203.0.113.42

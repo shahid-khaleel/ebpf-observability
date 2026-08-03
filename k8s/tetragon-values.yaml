@@ -1,0 +1,13 @@
+# Only the health_check filter is kept in the export denylist. The chart
+# default also denies namespace "" (unattributed/host) plus "cilium" and
+# "kube-system" - but in this environment process_kprobe events (file access,
+# syscalls) come back from Tetragon without pod/namespace attached at all, so
+# they get bucketed as "" and dropped by that filter even when they belong to
+# a real workload pod. The dashboard backend does its own PID-based
+# correlation and its own filtering of unattributed events, so we don't need
+# Tetragon's namespace-based export filter here.
+tetragon:
+  enableProcessCred: true
+  enableProcessNs: true
+  exportDenyList: |-
+    {"health_check":true}

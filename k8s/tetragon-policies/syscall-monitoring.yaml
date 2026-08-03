@@ -1,0 +1,36 @@
+# __x64_sys_connect is intentionally NOT hooked here. It was tried and
+# dropped: Hubble already covers network connections more reliably (with
+# correct pod/IP attribution), while this kprobe on connect() produced
+# high-volume, low-signal noise from host/control-plane processes and a
+# BTF type mismatch (struct sockaddr * vs "sock") that decoded garbage
+# arguments. See docs/DEPLOYMENT.md and docs/UNDERSTANDING.md.
+apiVersion: cilium.io/v1alpha1
+kind: TracingPolicy
+metadata:
+  name: syscall-monitoring
+spec:
+  kprobes:
+    - call: "__x64_sys_setuid"
+      syscall: true
+      args:
+        - index: 0
+          type: "int"
+    - call: "__x64_sys_unlink"
+      syscall: true
+      args:
+        - index: 0
+          type: "string"
+    - call: "__x64_sys_unlinkat"
+      syscall: true
+      args:
+        - index: 0
+          type: "int"
+        - index: 1
+          type: "string"
+    - call: "__x64_sys_chmod"
+      syscall: true
+      args:
+        - index: 0
+          type: "string"
+        - index: 1
+          type: "int"
