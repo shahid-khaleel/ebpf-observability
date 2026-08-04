@@ -1,3 +1,9 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: web-backend
+  namespace: ebpf-lab
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -15,6 +21,12 @@ spec:
       labels:
         app: web-backend
     spec:
+      # Dedicated, least-privilege ServiceAccount - no Role/RoleBinding is
+      # granted to it, since this workload never talks to the Kubernetes
+      # API. Required by the disallow-default-serviceaccount Kyverno policy;
+      # see k8s/kyverno/policies/.
+      serviceAccountName: web-backend
+      automountServiceAccountToken: false
       containers:
         - name: nginx
           image: nginx:1.27-alpine

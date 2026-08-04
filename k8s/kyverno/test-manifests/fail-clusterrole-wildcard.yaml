@@ -1,0 +1,12 @@
+# Expected result: REJECTED by the restrict-rbac-wildcards policy.
+# `kubectl apply -f fail-clusterrole-wildcard.yaml` should fail with an
+# admission webhook error - apiGroups/resources/verbs are all "*",
+# effectively unrestricted cluster-admin-equivalent access.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno-test-fail-wildcard
+rules:
+  - apiGroups: ["*"]
+    resources: ["*"]
+    verbs: ["*"]

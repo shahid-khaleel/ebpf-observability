@@ -1,3 +1,9 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: ebpf-dashboard
+  namespace: ebpf-lab
+---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
@@ -17,6 +23,13 @@ spec:
     spec:
       # Single-node minikube: hostPath below only works because this pod is
       # guaranteed to land on the same node where the Tetragon DaemonSet runs.
+      # Dedicated, least-privilege ServiceAccount - the dashboard talks to
+      # Hubble Relay over the network and reads Tetragon's export via
+      # hostPath, never the Kubernetes API, so no Role is granted to it.
+      # Required by the disallow-default-serviceaccount Kyverno policy; see
+      # k8s/kyverno/policies/.
+      serviceAccountName: ebpf-dashboard
+      automountServiceAccountToken: false
       containers:
         - name: dashboard
           image: ebpf-lab/dashboard:latest

@@ -1,0 +1,10 @@
+# Expected result: ALLOWED. Explicit, least-privilege apiGroups/resources/
+# verbs - no wildcards anywhere - so it satisfies restrict-rbac-wildcards.
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: kyverno-test-pass-scoped
+rules:
+  - apiGroups: [""]
+    resources: ["pods"]
+    verbs: ["get", "list", "watch"]

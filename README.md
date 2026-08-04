@@ -21,6 +21,16 @@ Monitoring Tool -> Threat Intelligence Feed -> Is IP Malicious? -> Alert / Ignor
 A single web dashboard (`ebpf-dashboard`) brings all of this together:
 connections, alerts, process creation, file access, and syscalls, live.
 
+On top of that, [Kyverno](https://kyverno.io) enforces RBAC hygiene as an
+**admission controller** — the opposite point in the pipeline from eBPF's
+after-the-fact observation, gatekeeping objects *before* they're ever
+created:
+
+```
+kubectl apply -> Kubernetes API Server -> Kyverno -> RBAC Policy Check -> PASS -> Object Created
+                                                                        -> FAIL -> Request Rejected
+```
+
 ## Documentation
 
 | Guide | Use it to... |
@@ -41,6 +51,7 @@ This README is the quickstart; the guides above are the deep dive.
 | **ebpf-dashboard** | Custom FastAPI app: tails Hubble flows + Tetragon's JSON export, matches destination IPs against `threat-intel/malicious_ips.txt`, and serves one combined UI. |
 | **web-backend** | Stock, unmodified `nginx` - the "sample application". |
 | **traffic-generator** | Stock `curl` image looping ordinary commands (curl, cat, ls, chmod, rm) to generate the four event classes. Also unmodified/uninstrumented - just an ordinary workload. |
+| **Kyverno** | Validating admission controller enforcing two cluster-wide RBAC policies (no default ServiceAccounts, no wildcard Roles/ClusterRoles). |
 
 Everything runs in the `ebpf-lab` namespace except Cilium/Hubble/Tetragon,
 which are cluster-wide DaemonSets in `kube-system`.
@@ -65,10 +76,10 @@ scripts/deploy.sh
 ```
 
 This is idempotent - safe to re-run after any change. It: starts minikube
-(docker driver, no default CNI), installs Cilium+Hubble, installs Tetragon,
-applies the TracingPolicies, builds the dashboard image straight into
-minikube's docker daemon, and deploys the namespace/configmap/dashboard/
-sample-app.
+(docker driver, no default CNI), installs Cilium+Hubble, installs Tetragon
+and its TracingPolicies, installs Kyverno and its RBAC ClusterPolicies,
+builds the dashboard image straight into minikube's docker daemon, and
+deploys the namespace/configmap/dashboard/sample-app.
 
 ## View it
 
@@ -95,6 +106,19 @@ Leave the script running; Ctrl+C stops both port-forwards.
 - **System Calls** shows `setuid`/`chmod`/`unlink` calls made by the sample
   workload.
 
+## Test the RBAC admission control
+
+```bash
+cd k8s/kyverno/test-manifests
+kubectl apply -f fail-pod-default-sa.yaml        # rejected
+kubectl apply -f pass-pod-custom-sa.yaml         # created
+kubectl delete -f pass-pod-custom-sa.yaml        # clean up
+```
+
+Full walkthrough (with the exact rejection output and all four gotchas hit
+building this) in
+[docs/UNDERSTANDING.md](docs/UNDERSTANDING.md#admission-control-testing-the-rbac-policy-check).
+
 ## Notes / known limitations
 
 - **In-memory only**: the dashboard keeps the last 300 events per category in
@@ -120,10 +144,13 @@ k8s/
   namespace.yaml                 ebpf-lab namespace
   tetragon-values.yaml           Helm values for Tetragon
   tetragon-policies/             TracingPolicy CRDs (file + syscall monitoring)
+  kyverno/
+    policies/                    ClusterPolicy CRDs (RBAC admission control)
+    test-manifests/              ready-made PASS/FAIL manifests for testing them
   dashboard.yaml                 ebpf-dashboard Deployment + Service
   sample-app/
-    web-backend.yaml             stock nginx "application"
-    traffic-generator.yaml       stock curl image generating activity
+    web-backend.yaml             stock nginx "application" (dedicated ServiceAccount)
+    traffic-generator.yaml       stock curl image generating activity (dedicated ServiceAccount)
 dashboard/                       FastAPI app + static UI + Dockerfile
 threat-intel/
   malicious_ips.txt              demo threat-intel feed (RFC 5737 IPs)

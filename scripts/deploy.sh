@@ -36,6 +36,18 @@ echo "==> Applying Tetragon TracingPolicies (file access + syscalls)"
 kubectl apply -f k8s/tetragon-policies/file-monitoring.yaml
 kubectl apply -f k8s/tetragon-policies/syscall-monitoring.yaml
 
+echo "==> Installing Kyverno (admission control) + RBAC policies"
+helm repo add kyverno https://kyverno.github.io/kyverno/ >/dev/null
+helm repo update kyverno >/dev/null
+helm upgrade --install kyverno kyverno/kyverno --version 3.8.2 --namespace kyverno --create-namespace \
+  --set admissionController.replicas=1 \
+  --set backgroundController.replicas=1 \
+  --set cleanupController.replicas=1 \
+  --set reportsController.replicas=1 \
+  --wait --timeout=180s
+kubectl apply -f k8s/kyverno/policies/disallow-default-serviceaccount.yaml
+kubectl apply -f k8s/kyverno/policies/restrict-rbac-wildcards.yaml
+
 echo "==> Building dashboard image inside minikube's docker daemon"
 eval "$(minikube docker-env)"
 docker build -t ebpf-lab/dashboard:latest dashboard

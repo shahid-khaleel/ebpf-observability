@@ -1,0 +1,58 @@
+apiVersion: kyverno.io/v1
+kind: ClusterPolicy
+metadata:
+  name: restrict-rbac-wildcards
+  annotations:
+    policies.kyverno.io/title: Restrict Wildcards in Roles/ClusterRoles
+    policies.kyverno.io/category: RBAC Best Practices
+    policies.kyverno.io/severity: high
+    policies.kyverno.io/description: >-
+      A Role or ClusterRole rule that grants "*" for apiGroups, resources,
+      or verbs is effectively unrestricted access. This policy blocks any
+      Role/ClusterRole containing a wildcard in any rule, forcing explicit,
+      least-privilege permission lists.
+spec:
+  validationFailureAction: Enforce
+  # See the matching comment in disallow-default-serviceaccount.yaml -
+  # exclude.any[].subjects requires background=false.
+  background: false
+  rules:
+    - name: validate-no-wildcards
+      match:
+        any:
+          - resources:
+              kinds:
+                - Role
+                - ClusterRole
+              operations:
+                - CREATE
+                - UPDATE
+      exclude:
+        any:
+          # Kyverno's own Helm chart manages ClusterRoles with intentionally
+          # broad permissions for its own control plane (e.g. the
+          # post-upgrade migration hook needs to touch arbitrary resource
+          # types). Without this, the policy engine blocks its own
+          # bootstrapping - a real gotcha hit while building this; see
+          # docs/DEPLOYMENT.md.
+          - subjects:
+              - kind: ServiceAccount
+                namespace: kyverno
+                name: "*"
+      validate:
+        message: >-
+          Wildcard ("*") apiGroups, resources, or verbs are not allowed in
+          Role/ClusterRole rules. List explicit resources and verbs
+          instead.
+        deny:
+          conditions:
+            any:
+              - key: "{{ contains(request.object.rules[].apiGroups[], '*') }}"
+                operator: Equals
+                value: true
+              - key: "{{ contains(request.object.rules[].resources[], '*') }}"
+                operator: Equals
+                value: true
+              - key: "{{ contains(request.object.rules[].verbs[], '*') }}"
+                operator: Equals
+                value: true
