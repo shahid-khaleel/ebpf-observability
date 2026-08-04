@@ -38,6 +38,7 @@ kubectl apply -> Kubernetes API Server -> Kyverno -> RBAC Policy Check -> PASS -
 | **[docs/SETUP.md](docs/SETUP.md)** | Get the local environment (Docker Desktop, minikube, kubectl, Helm) ready and understand the cluster sizing choices. |
 | **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** | Deploy stage by stage with verification commands, plus every real gotcha hit while building this (crash-loops, silent event drops, stale file handles) and the fix for each. |
 | **[docs/UNDERSTANDING.md](docs/UNDERSTANDING.md)** | See how the pieces fit together (with a data-flow diagram), how the threat-intel alert pipeline works end to end, how to read each panel, and how to verify it's really live. |
+| **[docs/ADMISSION-CONTROL.md](docs/ADMISSION-CONTROL.md)** | How the Kyverno RBAC admission-control layer works (`kubectl apply -> API Server -> Kyverno -> RBAC check -> PASS/FAIL`), both policies explained, a testing walkthrough, and four real Kyverno gotchas hit building it. |
 
 This README is the quickstart; the guides above are the deep dive.
 
@@ -117,7 +118,7 @@ kubectl delete -f pass-pod-custom-sa.yaml        # clean up
 
 Full walkthrough (with the exact rejection output and all four gotchas hit
 building this) in
-[docs/UNDERSTANDING.md](docs/UNDERSTANDING.md#admission-control-testing-the-rbac-policy-check).
+[docs/ADMISSION-CONTROL.md](docs/ADMISSION-CONTROL.md).
 
 ## Notes / known limitations
 
@@ -140,6 +141,7 @@ docs/
   SETUP.md                        environment prerequisites & cluster sizing
   DEPLOYMENT.md                   stage-by-stage deploy + troubleshooting
   UNDERSTANDING.md                architecture, data flow, panel guide, testing
+  ADMISSION-CONTROL.md            how the Kyverno RBAC admission layer works
 k8s/
   namespace.yaml                 ebpf-lab namespace
   tetragon-values.yaml           Helm values for Tetragon
