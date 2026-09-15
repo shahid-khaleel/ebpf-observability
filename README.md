@@ -116,7 +116,7 @@ kubectl apply -f pass-pod-custom-sa.yaml         # created
 kubectl delete -f pass-pod-custom-sa.yaml        # clean up
 ```
 
-Full walkthrough (with the exact rejection output and all four gotchas hit
+Full walkthrough (with the exact rejection output and all five gotchas hit
 building this) in
 [docs/ADMISSION-CONTROL.md](docs/ADMISSION-CONTROL.md).
 

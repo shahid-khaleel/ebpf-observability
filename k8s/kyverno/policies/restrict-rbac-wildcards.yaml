@@ -39,6 +39,20 @@ spec:
               - kind: ServiceAccount
                 namespace: kyverno
                 name: "*"
+          # The subjects-based exclude above only covers requests made *by*
+          # a kyverno-namespace ServiceAccount. The post-upgrade
+          # kyverno:migrate-resources ClusterRole/ClusterRoleBinding
+          # themselves are applied directly by the `helm upgrade` client
+          # (whatever identity is running helm - e.g. system:masters on a
+          # local cluster), not by that ServiceAccount, so on a re-run
+          # (helm upgrade against an already-installed release, with these
+          # policies already active) the subjects exclude doesn't match and
+          # this well-known hook resource gets blocked. Exclude it by name
+          # instead, since it's a fixed, known-trusted object owned by the
+          # Kyverno chart itself.
+          - resources:
+              names:
+                - "kyverno:migrate-resources"
       validate:
         message: >-
           Wildcard ("*") apiGroups, resources, or verbs are not allowed in

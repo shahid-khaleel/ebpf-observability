@@ -157,6 +157,9 @@ kubectl get clusterpolicy
 
 Every one of these produced a failure with no obvious connection to its
 actual cause — worth knowing before you write your own Kyverno policies.
+Four were hit building the policies initially; the fifth showed up later,
+the first time `scripts/deploy.sh` was re-run against an already-deployed
+cluster.
 
 ### 1. An operator type-mismatch silently rejected *everything*
 
@@ -229,6 +232,49 @@ silently like the first three.
 **Fix**: since this lab's goal is admission-time enforcement (the
 `kubectl apply` path), not retroactive scanning of pre-existing resources,
 both policies set `background: false`.
+
+### 5. The gotcha #3 fix doesn't cover a re-run of `helm upgrade` itself
+
+Gotcha #3's fix excludes requests made *by* a ServiceAccount in the
+`kyverno` namespace — which covers the migration **Job's pod** once it's
+running. It does **not** cover the `kyverno:migrate-resources`
+`ClusterRole`/`ClusterRoleBinding` themselves: those are hook resources
+applied directly by the `helm upgrade` client, authenticated as whatever
+identity is running `helm` (on a local cluster, typically your own
+kubeconfig user in `system:masters` — not a ServiceAccount at all). The
+very first `helm install` never hits this, because no `ClusterPolicy`
+exists yet at that point. But `scripts/deploy.sh` is meant to be
+idempotent (safe to `helm upgrade --install` again after the cluster is
+already up) — and on that second run, with `restrict-rbac-wildcards`
+already `Enforce`d, the policy blocks its own chart's post-upgrade hook,
+and the **Helm release itself gets stuck in a `failed` state** (the
+running Kyverno pods are unaffected; it's the release bookkeeping that
+breaks, and it'll block the *next* `helm upgrade` too until fixed).
+
+**Fix**: add a second, independent `exclude` entry matching that resource
+by name, so it doesn't matter which identity created the request:
+```yaml
+exclude:
+  any:
+    - subjects:
+        - kind: ServiceAccount
+          namespace: kyverno
+          name: "*"
+    - resources:
+        names:
+          - "kyverno:migrate-resources"
+```
+If a `helm upgrade` of Kyverno ever fails this way again, recovery is:
+apply the exclude fix above, then just re-run the same `helm upgrade
+--install ...` command — Helm will retry cleanly from a `failed` release
+without needing a manual rollback.
+
+**Lesson**: an `exclude.any[].subjects` rule only ever covers requests
+*authenticated as* that subject. A Helm chart's own hook **resources**
+(as opposed to the Pod/Job the hook eventually runs) are frequently
+applied by the caller's own identity, not an in-cluster ServiceAccount —
+excluding "Kyverno's own control plane" by subject alone silently misses
+that half of it.
 
 ## Glossary
 
