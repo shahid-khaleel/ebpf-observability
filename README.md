@@ -40,6 +40,7 @@ kubectl apply -> Kubernetes API Server -> Kyverno -> RBAC Policy Check -> PASS -
 | **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** | Deploy stage by stage with verification commands, plus every real gotcha hit while building this (crash-loops, silent event drops, stale file handles) and the fix for each. |
 | **[docs/UNDERSTANDING.md](docs/UNDERSTANDING.md)** | See how the pieces fit together (with a data-flow diagram), how the threat-intel alert pipeline works end to end, how to read each panel, and how to verify it's really live. |
 | **[docs/ADMISSION-CONTROL.md](docs/ADMISSION-CONTROL.md)** | How the Kyverno RBAC admission-control layer works (`kubectl apply -> API Server -> Kyverno -> RBAC check -> PASS/FAIL`), both policies explained, a testing walkthrough, and five real Kyverno gotchas hit building it. |
+| **[docs/GRPC.md](docs/GRPC.md)** | A standalone gRPC reference, beginner to advanced — protobuf, HTTP/2 internals, the four RPC shapes, security, load balancing — with Hubble Relay (the one real gRPC service in this lab) as the worked example. |
 
 This README is the quickstart; the guides above are the deep dive.
 
@@ -144,6 +145,7 @@ docs/
   DEPLOYMENT.md                   stage-by-stage deploy + troubleshooting
   UNDERSTANDING.md                architecture, data flow, panel guide, testing
   ADMISSION-CONTROL.md            how the Kyverno RBAC admission layer works
+  GRPC.md                         gRPC reference, beginner to advanced
 k8s/
   namespace.yaml                 ebpf-lab namespace
   tetragon-values.yaml           Helm values for Tetragon

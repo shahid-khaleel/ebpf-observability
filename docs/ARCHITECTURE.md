@@ -126,3 +126,4 @@ behavior.
 - [UNDERSTANDING.md](UNDERSTANDING.md) — the observability path in depth: per-panel data sources, the threat-intel alert pipeline, PID correlation.
 - [ADMISSION-CONTROL.md](ADMISSION-CONTROL.md) — the Kyverno path in depth: both policies explained, testing walkthrough, five real gotchas hit building it.
 - [DEPLOYMENT.md](DEPLOYMENT.md) — stage-by-stage install commands for every component in this diagram.
+- [GRPC.md](GRPC.md) — how the Hubble Relay <-> Hubble UI / dashboard connection in this diagram actually works under the hood, from first principles.
