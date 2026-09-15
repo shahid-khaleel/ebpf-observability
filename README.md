@@ -35,10 +35,11 @@ kubectl apply -> Kubernetes API Server -> Kyverno -> RBAC Policy Check -> PASS -
 
 | Guide | Use it to... |
 |---|---|
+| **[docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)** | See the whole system in one diagram — the observability path (Cilium/Hubble + Tetragon → dashboard) and the admission-control path (Kyverno) together, with a component reference table. |
 | **[docs/SETUP.md](docs/SETUP.md)** | Get the local environment (Docker Desktop, minikube, kubectl, Helm) ready and understand the cluster sizing choices. |
 | **[docs/DEPLOYMENT.md](docs/DEPLOYMENT.md)** | Deploy stage by stage with verification commands, plus every real gotcha hit while building this (crash-loops, silent event drops, stale file handles) and the fix for each. |
 | **[docs/UNDERSTANDING.md](docs/UNDERSTANDING.md)** | See how the pieces fit together (with a data-flow diagram), how the threat-intel alert pipeline works end to end, how to read each panel, and how to verify it's really live. |
-| **[docs/ADMISSION-CONTROL.md](docs/ADMISSION-CONTROL.md)** | How the Kyverno RBAC admission-control layer works (`kubectl apply -> API Server -> Kyverno -> RBAC check -> PASS/FAIL`), both policies explained, a testing walkthrough, and four real Kyverno gotchas hit building it. |
+| **[docs/ADMISSION-CONTROL.md](docs/ADMISSION-CONTROL.md)** | How the Kyverno RBAC admission-control layer works (`kubectl apply -> API Server -> Kyverno -> RBAC check -> PASS/FAIL`), both policies explained, a testing walkthrough, and five real Kyverno gotchas hit building it. |
 
 This README is the quickstart; the guides above are the deep dive.
 
@@ -138,6 +139,7 @@ and its fix, is in [docs/DEPLOYMENT.md](docs/DEPLOYMENT.md).
 
 ```
 docs/
+  ARCHITECTURE.md                 the whole system in one diagram
   SETUP.md                        environment prerequisites & cluster sizing
   DEPLOYMENT.md                   stage-by-stage deploy + troubleshooting
   UNDERSTANDING.md                architecture, data flow, panel guide, testing
