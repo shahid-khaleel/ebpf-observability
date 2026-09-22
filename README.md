@@ -46,6 +46,84 @@ This README is the quickstart; the guides above are the deep dive.
 
 ## Architecture
 
+Two independent paths through the same cluster — a passive **observability** path (kernel activity flowing up to your browser) and an active **admission-control** path (`kubectl apply` being allowed or rejected before an object ever exists). Full walkthrough in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+```mermaid
+flowchart TD
+    OPERATOR["Cluster operator<br/>(kubectl apply)"]
+
+    subgraph K8sAPI["Kubernetes API Server"]
+        WEBHOOK["ValidatingWebhookConfiguration"]
+        ETCD[("etcd")]
+    end
+
+    subgraph KyvernoSG["Kyverno (admission control)"]
+        KYV["Admission Controller"]
+        POL{"RBAC ClusterPolicy check<br/>disallow-default-serviceaccount<br/>restrict-rbac-wildcards"}
+    end
+
+    OPERATOR --> K8sAPI
+    K8sAPI -- "CREATE/UPDATE" --> WEBHOOK
+    WEBHOOK --> KYV --> POL
+    POL -- PASS --> ETCD
+    POL -- "FAIL (4xx)" --> OPERATOR
+    ETCD -. "schedules" .-> Workloads
+
+    subgraph Workloads["ebpf-lab workloads (stock, unmodified images)"]
+        WB["web-backend<br/>(nginx)"]
+        TG["traffic-generator<br/>(curl loop)"]
+    end
+
+    subgraph Kernel["Linux Kernel (per node)"]
+        NET["Network stack"]
+        PROC["Process / syscall hooks"]
+    end
+
+    WB & TG -- "ordinary traffic" --> NET
+    WB & TG -- "execve, open(), setuid,<br/>chmod, unlink" --> PROC
+
+    subgraph CiliumSG["Cilium"]
+        CA["Cilium Agent<br/>(eBPF datapath, per node)"]
+        HR["Hubble Relay<br/>(cluster-wide aggregation)"]
+        HU["Hubble UI"]
+    end
+
+    subgraph TetragonSG["Tetragon"]
+        TA["Tetragon Agent<br/>(eBPF kprobes, per node)"]
+        EXP["JSON export file<br/>/var/run/cilium/tetragon/tetragon.log"]
+    end
+
+    NET -- "eBPF programs" --> CA
+    PROC -- "eBPF kprobes" --> TA
+    CA -- "gRPC" --> HR
+    HR --> HU
+    TA -- "writes" --> EXP
+
+    subgraph Dashboard["ebpf-dashboard (FastAPI)"]
+        TH["tail_hubble()<br/>hubble observe --follow"]
+        TT["tail_tetragon()<br/>tail -f"]
+        COR["PID correlation<br/>+ threat-intel match"]
+        API2["/api/* endpoints"]
+    end
+
+    HR -- "gRPC" --> TH
+    EXP -- "tailed" --> TT
+    TH --> COR
+    TT --> COR
+
+    TI["threat-intel/malicious_ips.txt<br/>(+ optional live feed)"]
+    TI --> COR
+    COR --> API2
+
+    subgraph Browser["Your browser"]
+        UI1["Dashboard :8080<br/>Connections / Alerts /<br/>Processes / Files / Syscalls"]
+        UI2["Hubble UI :8081<br/>live network graph"]
+    end
+
+    API2 --> UI1
+    HU --> UI2
+```
+
 | Component | Role |
 |---|---|
 | **Cilium** | CNI + eBPF datapath. Every pod's network traffic is observed here, unmodified. |
